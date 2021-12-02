@@ -18,6 +18,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -39,19 +40,30 @@ public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) {
+        String method = request.method().name();
+        String content = request.content().toString(StandardCharsets.UTF_8);
         String uri = request.uri();
+        HttpHeaders header = request.headers();
+        List<Map.Entry<String, String>> headerList = header.entries();
+
         GeneralResponse generalResponse;
         if (uri.contains(DELIMITER)) {
             uri = uri.substring(0, uri.indexOf(DELIMITER));
         }
+        log.debug("收到uri={}, method={}", uri, method);
         //根据不同的请求API做不同的处理(路由分发)
         Action action = httpRouter.getRoute(new HttpLabel(uri, request.method()));
         if (action != null) {
             String s = request.uri();
-            if (request.headers().get(HttpHeaderNames.CONTENT_TYPE.toString()).equals(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
-                s = s + "&" + request.content().toString(StandardCharsets.UTF_8);
+            if(method.equals(HttpMethod.POST.name())) {
+                //TODO: 我也不知道这段是做什么的
+                String contentType = header.get(HttpHeaderNames.CONTENT_TYPE.toString());
+                if (contentType.equals(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
+                    s = s + "&" + content;
+                }
             }
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(s);
+            log.debug("收到数据: {}", queryStringDecoder.toString());
             Map<String, List<String>> parameters = queryStringDecoder.parameters();
             Class[] classes = action.getMethod().getParameterTypes();
             Object[] objects = new Object[classes.length];
@@ -66,8 +78,9 @@ public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                             objects[i] = JsonUtil.fromJson(request, c);
                         }
                     }
-                    //处理数组类型
+
                 } else if (c.isArray()) {
+                    //处理数组类型
                     String paramName = action.getMethod().getParameters()[i].getName();
                     List<String> paramList = parameters.get(paramName);
                     if (CollectionUtils.isNotEmpty(paramList)) {
@@ -84,9 +97,11 @@ public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     }
                 }
             }
+            log.debug("处理后:{}", Arrays.toString(objects));
             ResponseUtil.response(ctx, HttpUtil.isKeepAlive(request), action.call(objects));
         } else {
             //错误处理
+            log.debug("没有匹配的路由。");
             generalResponse = new GeneralResponse(HttpResponseStatus.BAD_REQUEST, "请检查你的请求方法及url", null);
             ResponseUtil.response(ctx, HttpUtil.isKeepAlive(request), generalResponse);
         }
@@ -94,7 +109,7 @@ public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
-        log.warn("{}", e);
+        log.warn(e.getLocalizedMessage());
         ResponseUtil.response(ctx, false, new GeneralResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Internal Error: %s", ExceptionUtils.getRootCause(e)), null));
         ctx.close();
     }

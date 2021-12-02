@@ -1,0 +1,24 @@
+echoserver:
+  port:8081
+
+app-config:
+  interval: 5000  #尝试重连间隔时间（单位:毫秒）
+
+logging:
+  level: trace,debug,info,warn,error
+
+spring:
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:serverinfo.db
+    username:
+    password:
+  sql:
+    init:
+      username:
+      password:
+      schema-locations:
+        - classpath*:db/V1.1__schema.sql
+      data-locations:
+        - classpath*:db/V1.2__data.sql
+      mode: always

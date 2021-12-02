@@ -5,12 +5,23 @@ import cn.morethink.netty.router.RequestBody;
 import cn.morethink.netty.router.RequestMapping;
 import cn.morethink.netty.router.util.GeneralResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Netty代理服务器的路由表
+ */
 @Slf4j
-public class DemoController {
+@Controller
+public class DemoController extends RouteController {
+
+    @RequestMapping(uri = "/test", method = "GET")
+    public GeneralResponse test() {
+        log.info("GET::");
+        return new GeneralResponse("Hello Netty");
+    }
 
     @RequestMapping(uri = "/test", method = "POST")
     public GeneralResponse test(@RequestBody User user, String test, Integer test1, int test2,
