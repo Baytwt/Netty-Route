@@ -1,17 +1,14 @@
 package cn.morethink.netty.server.pipeline;
 
 import cn.morethink.netty.demo.controller.HelloController;
-import cn.morethink.netty.demo.controller.RouteController;
 import cn.morethink.netty.router.handler.RouterHandler;
-import cn.morethink.netty.server.codec.FrontendDecode;
-import cn.morethink.netty.server.codec.FrontendEncode;
 import cn.morethink.netty.server.handler.LoggedIdleStateHandler;
+import cn.morethink.netty.server.handler.ProxyBackendHandler;
 import cn.morethink.netty.server.handler.ProxyFrontendHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.springframework.stereotype.Component;
 
@@ -35,10 +32,11 @@ public class FrontendPipeline extends ChannelInitializer<SocketChannel> {
         // HTTP 服务的解码器
         pipeline.addLast(new HttpServerCodec());
         // HTTP 消息的合并处理
-        pipeline.addLast(new HttpObjectAggregator(10 * 1024));
+        pipeline.addLast(new HttpObjectAggregator(Short.MAX_VALUE));
         // 路由
 //        pipeline.addLast(new RouterHandler(HelloController.class.getName()));
         pipeline.addLast("ProxyFrontendHandler", new ProxyFrontendHandler());
+
 
     }
 }

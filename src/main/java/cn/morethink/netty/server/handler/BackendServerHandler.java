@@ -1,19 +1,9 @@
 package cn.morethink.netty.server.handler;
 
-import cn.morethink.netty.server.GatewayServer;
-import cn.morethink.netty.server.message.LiveChannelCache;
 import cn.morethink.netty.server.message.LiveMessage;
-import cn.morethink.netty.server.message.PingPong;
-import cn.morethink.netty.server.pipeline.HeartBeatClientPipeline;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @ChannelHandler.Sharable
-public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMessage> {
+public class BackendServerHandler extends SimpleChannelInboundHandler<LiveMessage> {
 
     private Channel inboundChannel;
     private ProxyFrontendHandler proxyFrontendHandler;
@@ -41,12 +31,13 @@ public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMess
     // 缓存ChannelHandlerContext
     private ChannelHandlerContext ctx;
 
-    public HeartBeatClientHandler(Channel inboundChannel){
+    public BackendServerHandler(Channel inboundChannel, String myHost, int myPort){
         this.inboundChannel = inboundChannel;
+        this.myHost = myHost;
+        this.myPort = myPort;
     }
 
     /** 触发事件时执行
-     *  空闲10秒时，发送心跳包到网关服务器
       */
 
     @Override
@@ -58,7 +49,7 @@ public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMess
                 // 向网关服务器发送消息
                 LiveMessage msg = new LiveMessage();
                 msg.setType(LiveMessage.TYPE_HEART);
-                msg.setContent(heartBeat.toString());
+                msg.setContent("heart beat|" + myHost+":"+myPort +  "|" + heartBeat.toString());
                 log.info("我已经10秒空闲。发送心跳信息→{}: {}", ch.remoteAddress(), msg.toString());
                 ChannelFuture f = ctx.writeAndFlush(msg).addListener(new ChannelFutureListener() {
                     @Override
@@ -75,7 +66,7 @@ public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMess
                                     @SneakyThrows
                                     @Override
                                     public void run() {
-                                        HeartBeatClientHandler.this.userEventTriggered(ctx, evt);
+                                        BackendServerHandler.this.userEventTriggered(ctx, evt);
                                     }
                                 }, 5000, TimeUnit.MILLISECONDS);
                             } else {
@@ -116,25 +107,6 @@ public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMess
 //        heartBeat(this.ctx, heartbeatMsg);
 //    }
 
-    //使用定时器，发送心跳报文
-    public void heartBeat(ChannelHandlerContext ctx,
-                          String heartbeatMsg)
-    {
-        ctx.executor().schedule(() ->
-        {
-
-            if (ctx.channel().isActive())
-            {
-                log.info("发送心跳消息[{}] → [{}]",heartbeatMsg, ctx.channel().remoteAddress());
-                ctx.writeAndFlush(heartbeatMsg);
-
-                //递归调用，发送下一次的心跳
-                heartBeat(ctx, heartbeatMsg);
-            }
-
-        }, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
-    }
-
     /**
      * 接到来自网关服务器的消息
      */
@@ -146,9 +118,13 @@ public class HeartBeatClientHandler extends SimpleChannelInboundHandler<LiveMess
             case LiveMessage.TYPE_HEART: {
                 // 心跳验证
                 log.debug("接到心跳回写来自{} 内容{}", ch.remoteAddress(), content);
-                if (!content.equals(heartBeat.toString())) {
+                String returnedHeartBeat =content.split("\\|")[2];
+                if (!returnedHeartBeat.equals(heartBeat.toString())) {
                     // 心跳验证值错误
                     log.error("心跳验证值错误");
+                } else {
+                    log.debug("心跳验证值正确");
+                    heartBeat.incrementAndGet();
                 }
 //                ctx.channel().writeAndFlush(msg);
                 break;

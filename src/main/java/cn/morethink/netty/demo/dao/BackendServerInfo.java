@@ -2,6 +2,8 @@ package cn.morethink.netty.demo.dao;
 
 import io.netty.handler.codec.http.HttpMethod;
 import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.ToString;
 
 import java.net.SocketAddress;
 import java.util.*;
@@ -10,6 +12,8 @@ import java.util.*;
 //@Repository
 //@TableName(value = "backend_server_info")
 @AllArgsConstructor
+@ToString
+@Data
 public class BackendServerInfo {
 //    @TableId(value = "id",type = IdType.AUTO)
 //    private String id;
@@ -17,6 +21,7 @@ public class BackendServerInfo {
     private String ip;
 //    @TableField(value = "port")
     private int port;
+    private int reveivePort;
 
     // 各http方法接收的路由列表 TODO:route之间的不重复性
     private Map<HttpMethod, Set<String>> route;

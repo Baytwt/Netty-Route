@@ -1,4 +1,4 @@
-package cn.morethink.netty.server.handler;
+package cn.morethink.netty.server.pipeline;
 
 import cn.morethink.netty.router.HttpRouter;
 import cn.morethink.netty.router.handler.RouterHandler;

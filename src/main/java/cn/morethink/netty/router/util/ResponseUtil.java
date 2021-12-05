@@ -29,7 +29,7 @@ public class ResponseUtil {
      */
     public static void response(ChannelHandlerContext ctx, boolean keepAlive, GeneralResponse generalResponse) {
         byte[] jsonByteByte = JsonUtil.toJson(generalResponse).getBytes();
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, generalResponse.getStatus(),
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, generalResponse.getStatus(),
                 Unpooled.wrappedBuffer(jsonByteByte));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());

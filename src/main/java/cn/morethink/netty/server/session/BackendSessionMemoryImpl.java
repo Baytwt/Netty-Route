@@ -5,15 +5,14 @@ import cn.morethink.netty.router.HttpLabel;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpMethod;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BackendSessionMemoryImpl implements BackendSession {
 
-    private final Map<BackendServerInfo, Channel> backendServerChannelMap = new ConcurrentHashMap<>();
-    private final Map<Channel, BackendServerInfo> channelBackendServerInfoMap = new ConcurrentHashMap<>();
+    private static final Map<BackendServerInfo, Channel> backendServerChannelMap = new ConcurrentHashMap<>();
+    private static final Map<Channel, BackendServerInfo> channelBackendServerInfoMap = new ConcurrentHashMap<>();
 
     public Channel getChannel(HttpMethod method, String uri) {
         Set<BackendServerInfo> infoSet = backendServerChannelMap.keySet();
@@ -34,9 +33,25 @@ public class BackendSessionMemoryImpl implements BackendSession {
         return channelBackendServerInfoMap.containsKey(channel);
     }
 
+    public Channel getChannel(String address) {
+        BackendServerInfo info = new BackendServerInfo(address);
+        return backendServerChannelMap.get(info);
+    }
+
     @Override
     public Channel getChannel(BackendServerInfo info) {
         return backendServerChannelMap.get(info);
+    }
+
+    public BackendServerInfo getBackendServerInfo(HttpMethod method, String uri) {
+        Set<BackendServerInfo> infoSet = backendServerChannelMap.keySet();
+        for (BackendServerInfo info: infoSet) {
+            if(info.getRoute(method).contains(uri)) {
+                return info;
+            }
+        }
+        // 无匹配
+        return null;
     }
 
     @Override

@@ -70,7 +70,6 @@ public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         if (action != null) {
             String s = request.uri();
             if(method.equals(HttpMethod.POST.name())) {
-                //TODO: 我也不知道这段是做什么的
                 String contentType = header.get(HttpHeaderNames.CONTENT_TYPE.toString());
                 if (contentType.equals(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
                     s = s + "&" + content;

@@ -16,11 +16,19 @@ public class LiveMessage {
     public LiveMessage() {
     }
 
-    public LiveMessage heartBeatMessage(String content) {
+    public LiveMessage helloMessage() {
+        LiveMessage msg = new LiveMessage();
+        msg.setType(LiveMessage.TYPE_MESSAGE);
+        msg.setContent("hello");
+        msg.setLength(msg.getContent().getBytes().length);
+        return msg;
+    }
+
+    public LiveMessage heartBeatMessage(String address) {
         LiveMessage msg = new LiveMessage();
         msg.setType(LiveMessage.TYPE_HEART);
-        msg.setLength(content.getBytes().length);
-        msg.setContent(content);
+        msg.setContent("heart beat|" + address);
+        msg.setLength(msg.getContent().getBytes().length);
         return msg;
     }
 

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class HeartBeatServerHandler extends SimpleChannelInboundHandler<LiveMessage> {
 
-    private static Map<Integer, LiveChannelCache> channelCache = new HashMap<>();
+//    private static Map<Integer, LiveChannelCache> channelCache = new HashMap<>();
     
     int readIdleTimes = 0;
 
@@ -55,7 +55,7 @@ public class HeartBeatServerHandler extends SimpleChannelInboundHandler<LiveMess
         if(readIdleTimes > 3){
 //            log.info("{}读空闲超过3次，关闭连接", ctx.channel().remoteAddress());
             // 空闲超过3次
-            LiveMessage msg = new LiveMessage().heartBeatMessage("2");
+            LiveMessage msg = new LiveMessage().heartBeatMessage("exit");
             ChannelFuture f = ctx.channel().writeAndFlush(msg);
 
 
@@ -70,45 +70,42 @@ public class HeartBeatServerHandler extends SimpleChannelInboundHandler<LiveMess
     protected void channelRead0(ChannelHandlerContext ctx, LiveMessage msg) throws Exception {
         Channel channel = ctx.channel();
         final int hashCode = channel.hashCode();
-        log.debug("来自[{}]消息:{}", ctx.channel().remoteAddress(), msg.toString());
-//        if (!channelCache.containsKey(hashCode)) {
-//            log.debug("channelCache.containsKey(hashCode), put key:" + hashCode);
-//            channel.closeFuture().addListener(future -> {
-//                log.debug("channel close, remove key:" + hashCode);
-//                channelCache.remove(hashCode);
-//            });
-//            ScheduledFuture scheduledFuture = ctx.executor().schedule(
-//                    () -> {
-//                        log.debug("schedule runs, close channel:" + hashCode);
-//                        channel.close();
-//                    }, 10, TimeUnit.SECONDS);
-//            channelCache.put(hashCode, new LiveChannelCache(channel, scheduledFuture));
-//        }
+        String address = channel.remoteAddress().toString();
+        log.debug("来自[{}]消息:{}", address, msg.toString());
 
         switch (msg.getType()) {
             case LiveMessage.TYPE_HEART: {
                 // 心跳
-                String content = msg.getContent();
-                String address = channel.remoteAddress().toString();
-                log.debug("接到心跳来自{} 内容{}", channel.remoteAddress(), content);
-                // 检查通道池
+                String heartbeatText = msg.getContent();
+                log.debug("接到心跳来自{} 内容{}", channel.remoteAddress(), heartbeatText);
+                // 检查连接池
                 if(!GatewayServer.backendSessionMemory.containsChannel(channel)) {
-                    BackendServerInfo info = new BackendServerInfo(address);
-                    GatewayServer.backendSessionMemory.add(channel, address);
+                    // 连接池中没有，则将这个后端服务器及其连接添加进去
+                    // 从心跳字符串得到后端服务器的端口
+                    String trueAddress = heartbeatText.split("\\|")[1];
+                    GatewayServer.backendSessionMemory.add(channel, trueAddress);
+                    log.info("添加了后端服务器及其连接: 地址{}", trueAddress);
                 }
-                LiveChannelCache cache = channelCache.get(hashCode);
-                // 计划5秒后关闭连接
-//                ScheduledFuture scheduledFuture = ctx.executor().schedule(() -> channel.close(), 5, TimeUnit.SECONDS);
-//                cache.getScheduledFuture().cancel(true);
-//                cache.setScheduledFuture(scheduledFuture);
+                // 计划60秒后关闭连接，除非接到了心跳回写则取消关闭
+                ScheduledFuture scheduledFuture = ctx.executor().schedule(() -> channel.close(), 60, TimeUnit.SECONDS);
+                LiveChannelCache cache = new LiveChannelCache(channel, scheduledFuture);
+                cache.getScheduledFuture().cancel(true);
+                cache.setScheduledFuture(scheduledFuture);
+                // 将心跳消息原封不动地返回
                 ctx.channel().writeAndFlush(msg);
                 break;
             }
             case LiveMessage.TYPE_MESSAGE: {
-                channelCache.entrySet().stream().forEach(entry -> {
-                    Channel otherChannel = entry.getValue().getChannel();
-                    otherChannel.writeAndFlush(msg);
-                });
+                // 后端服务器的消息回复，写到相应的连接中
+                // 检查连接池
+                Channel otherChannel = GatewayServer.backendSessionMemory.getChannel(address);
+                if(otherChannel != null) {
+                    if(otherChannel.isActive()) {
+                        otherChannel.writeAndFlush(msg);
+                    } else {
+                        log.error("连接不活跃");
+                    }
+                }
                 break;
             }
             default: {
