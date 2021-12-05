@@ -7,21 +7,21 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@TableName("frontend_port_info")
+//@TableName("frontend_port_info")
 public class FrontendPortInfo {
 
-    @TableId(value = "id", type = IdType.AUTO)
-    private String id;
-    @TableField(value = "port")
+//    @TableId(value = "id", type = IdType.AUTO)
+//    private String id;
+//    @TableField(value = "port")
     private  int port;
 
-    public String getId() {
-        return id;
-    }
+//    public String getId() {
+//        return id;
+//    }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+//    public void setId(String id) {
+//        this.id = id;
+//    }
 
     public int getPort() {
         return port;

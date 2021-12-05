@@ -1,5 +1,6 @@
 package cn.morethink.netty.server.handler;
 
+import cn.morethink.netty.server.message.PingPong;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.timeout.IdleState;
@@ -7,7 +8,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProxyBackendHandler extends SimpleChannelInboundHandler<byte[]> {
+public class ProxyBackendHandler extends SimpleChannelInboundHandler<String> {
 
     private Channel inboundChannel;
     private ProxyFrontendHandler proxyFrontendHandler;
@@ -45,8 +46,11 @@ public class ProxyBackendHandler extends SimpleChannelInboundHandler<byte[]> {
      * @throws Exception
      */
     @Override
-    public void channelRead0(final ChannelHandlerContext ctx, byte[] msg) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, String msg) throws Exception {
         log.debug("{}服务器返回了消息", ctx.channel().remoteAddress());
+        if(msg.startsWith(PingPong.IAMALIVE)) {
+            log.info(msg);
+        }
         //接收目标服务器发送来的数据并打印 然后把数据写入代理服务器和客户端的通道里
         //通过inboundChannel向客户端写入数据
         inboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {

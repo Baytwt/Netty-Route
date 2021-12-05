@@ -9,6 +9,7 @@ import cn.morethink.netty.router.util.GeneralResponse;
 import cn.morethink.netty.router.util.JsonUtil;
 import cn.morethink.netty.router.util.ParamParser;
 import cn.morethink.netty.router.util.ResponseUtil;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
@@ -28,14 +29,27 @@ import java.util.Map;
  * @date 2018/9/5
  */
 @Slf4j
+@ChannelHandler.Sharable
 public class RouterHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     private static final String DELIMITER = "?";
 
     HttpRouter httpRouter;
 
+    public RouterHandler(String controllerClass) {
+        HttpRouter httpRouter = new HttpRouter();
+        httpRouter.addRouter(controllerClass);
+        this.httpRouter = httpRouter;
+    }
+
     public RouterHandler(HttpRouter httpRouter) {
         this.httpRouter = httpRouter;
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) {
+        log.info("连接激活{}", ctx.channel().remoteAddress());
+        ctx.fireChannelActive();
     }
 
     @Override
